@@ -4,7 +4,7 @@
 #include <iostream>
 #include <queue>
 #include <climits>
-
+#define INFINITE (INT_MAX >> 1)
 //undirected graph
 
 //class Edge
@@ -30,8 +30,8 @@ template<class VertexType, class WeightType> class Graph;
 template<class VertexType, class WeightType>
 class Vertex{
 public:
-	Vertex(): degree(0), neighbours(nullptr), known(false), path(-1), dst(INT_MAX){}
-	Vertex(VertexType val): value(val), degree(0), neighbours(nullptr), known(false), path(-1), dst(INT_MAX){}
+	Vertex(): neighbours(nullptr), known(false), path(-1), dst(INFINITE){}
+	Vertex(VertexType val): value(val), neighbours(nullptr), known(false), path(-1), dst(INFINITE){}
 	~Vertex(){
 		while(neighbours){
 			Edge<WeightType>* tmp = neighbours;
@@ -44,10 +44,6 @@ private:
 	Edge<WeightType>* neighbours;
 	VertexType value;
 
-	//for topoSort
-	int degree; 
-
-	//for shortest path
 	bool known;
 	int path;
 	WeightType dst;
@@ -83,19 +79,16 @@ public:
 	void printPath(int n);//print shortest path of vset[n]
 	void initPath();//init [known, path, dst] value of each vertex
 
-	//void topoSort(); 
-
-	//shortest path algorithm
-	void unWeight(int n); //unweighted shortest path
-	void Dijkstra(int n); //weighted shortest path, O(V*V)
-	bool BellmanFord(int n);//weighted shortest path with negative circle, O(V * E)
-	bool SPFA(int n); //weighted shortest path with negative circle, O(k * E)
+	//minimum spanning tree
+	void prim(int n, std::vector<pair<int, int> > &primEdges);
+	void kruskal(int n, std::vector<pair<int, int> > &primEdges);
 private:
 	int vertexNum; // number of vertexs
 	int edgeNum;   // number of edges
 	int capacity;  // maximum size of Graph
 	static const int DEFAULT_SIZE = 10;
 	Vertex<VertexType, WeightType>* vset; // set of vertexs
+
 	//bool (*insertEdgeFunc)(int, int, WeightType);//insertEdge Function
 };
 
@@ -144,8 +137,6 @@ bool Graph<VertexType, WeightType>::insertEdge(int idx1, int idx2, WeightType we
 		}
 
 		++edgeNum;
-		++vset[idx1].degree;
-		++vset[idx2].degree;
 		
 		return true;
 	}
@@ -192,147 +183,42 @@ template<class VertexType, class WeightType>
 void Graph<VertexType, WeightType>::initPath(){
 	for(int i = 0; i < vertexNum; ++i){
 		vset[i].known = false;
-		vset[i].dst = INT_MAX;
+		vset[i].dst = INFINITE;
 		vset[i].path = -1;
 	}
 }
 
 template<class VertexType, class WeightType>
-void Graph<VertexType, WeightType>::unWeight(int n){
-	if(n < 0 || n >= vertexNum){
-		std::cerr << "unWeight(): Array Index Out Of Bounds Exception..." << std::endl;
-		return;
-	}
-	initPath();
-
-	std::queue<int> que;
-	vset[n].dst = 0;
-	que.push(n);
-
-	while(!que.empty()){
-		int cur = que.front();
-		vset[cur].known = true;
-		que.pop();
-		Edge<WeightType>* ptr = vset[cur].neighbours;
-		while(ptr){
-			if(!vset[ptr->dest].known && vset[cur].dst + 1 < vset[ptr->dest].dst){
-				vset[ptr->dest].dst = vset[cur].dst + 1;
-				vset[ptr->dest].path = cur;
-				que.push(ptr->dest);
-			}
-			ptr = ptr->next;
-		}
-	}
-}
-
-template<class VertexType, class WeightType>
-void Graph<VertexType, WeightType>::Dijkstra(int n){
+void Graph<VertexType, WeightType>::prim(int n, std::vector<pair<int, int>> &primEdges){
 	if(n < 0 || n >= vertexNum){
 		std::cerr << "Dijkstra(): Array Index Out Of Bounds Exception..." << std::endl;
 		return;
 	}
 
 	initPath();
+
+	primEdges.clear();
+
 	std::priority_queue< std::pair<WeightType, int> > pq;
 	vset[n].dst = 0;
 	pq.push(std::pair<WeightType, int>(0, n));
 
 	while(!pq.empty()){
-		WeightType minDst = pq.top().first;
-		int minIdx = pq.top().second;
-		vset[minIdx].known = true;
+		auto cur = pq.top(); 
+		vset[cur.second].known = true;
+		primEdges.push_back(std::pair<int, int>(vset[cur.second].path, cur.second));
 		pq.pop();
-		Edge<WeightType>* ptr = vset[minIdx].neighbours;
+		Edge<WeightType>* ptr = vset[cur.second].neighbours;
 		while(ptr){
-			if(!vset[ptr->dest].known && minDst + ptr->weight < vset[ptr->dest].dst){
-				vset[ptr->dest].dst = minDst + ptr->weight;
-				vset[ptr->dest].path = minIdx;
+			if(!vset[ptr->dest].known &&  cur.first + ptr->weight < vset[ptr->dest].dst){
+				vset[ptr->dest].dst = cur.first + ptr->weight;
+				vset[ptr->dest].path = cur.second;
 				pq.push(std::pair<WeightType, int>(vset[ptr->dest].dst, ptr->dest));
 			}
 			ptr = ptr->next;
 		}
 	}
 }
-
-
-template<class VertexType, class WeightType>
-bool Graph<VertexType, WeightType>::BellmanFord(int n){
-	if(n < 0 || n >= vertexNum){
-		std::cerr << "Dijkstra(): Array Index Out Of Bounds Exception..." << std::endl;
-		return false;
-	}
-
-	initPath();
-	vset[n].dst = 0;
-
-	//slack operation on each edge
-	int k = 1;
-	while(k++ < vertexNum){
-		for(int j = 0; j < vertexNum; ++j){
-			Edge<WeightType>*ptr = vset[j].neighbours;
-			while(ptr){
-				if(vset[j].dst + ptr->weight < vset[ptr->dest].dst){
-					vset[ptr->dest].dst = vset[j].dst + ptr->weight;
-					vset[ptr->dest].path = j;
-				}
-				ptr = ptr->next;
-			}
-		}
-	}
-
-	//check the negative circle
-	for(int i = 0; i < vertexNum; ++i){
-		Edge<WeightType>* ptr = vset[i].neighbours;
-		while(ptr){
-			if(vset[i].dst + ptr->weight < vset[ptr->dest].dst)
-				return false;//exists negative circle
-			ptr = ptr->next;
-		}
-	}
-	return true;
-}
-
-
-template<class VertexType, class WeightType>
-bool Graph<VertexType, WeightType>::SPFA(int n){
-	if(n < 0 || n >= vertexNum){
-		std::cerr << "Dijkstra(): Array Index Out Of Bounds Exception..." << std::endl;
-		return false;
-	}
-
-	initPath();
-
-	vset[n].dst = 0; 
-	vset[n].known = true;//decide whether vertex is included in queue.
-	std::priority_queue<int> pq;
-	pq.push(n);
-
-	//record the dequeued times of each vertex
-	std::vector<int> dq(vertexNum, 0);
-	dq[n] = 1;
-
-	while(!pq.empty()){
-		int cur = pq.top();
-		pq.pop();
-		vset[cur].known = false;
-		Edge<WeightType>* ptr = vset[cur].neighbours;
-		while(ptr){
-			if(vset[cur].dst + ptr->weight < vset[ptr->dest].dst){
-				vset[ptr->dest].dst = vset[cur].dst + ptr->weight;
-				vset[ptr->dest].path = cur;
-				if(!vset[ptr->dest].known){
-					vset[ptr->dest].known = true;
-					pq.push(ptr->dest);
-					if(++dq[ptr->dest] > vertexNum - 1)
-						return false;				
-				}
-			}
-			ptr = ptr->next;
-		}
-	}
-	return true;
-}
-
 
 
 

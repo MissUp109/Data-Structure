@@ -4,7 +4,7 @@
 #include <iostream>
 #include <queue>
 #include <climits>
-
+#define INFINITE (INT_MAX >> 1)
 //class Edge
 template<class WeightType>
 class Edge{
@@ -28,8 +28,8 @@ template<class VertexType, class WeightType> class Graph;
 template<class VertexType, class WeightType>
 class Vertex{
 public:
-	Vertex(): degree(0), neighbours(nullptr), known(false), path(-1), dst(INT_MAX){}
-	Vertex(VertexType val): value(val), degree(0), neighbours(nullptr), known(false), path(-1), dst(INT_MAX){}
+	Vertex(): degree(0), neighbours(nullptr), known(false), path(-1), dst(INFINITE){}
+	Vertex(VertexType val): value(val), degree(0), neighbours(nullptr), known(false), path(-1), dst(INFINITE){}
 	~Vertex(){
 		while(neighbours){
 			Edge<WeightType>* tmp = neighbours;
@@ -180,7 +180,7 @@ template<class VertexType, class WeightType>
 void Graph<VertexType, WeightType>::initPath(){
 	for(int i = 0; i < vertexNum; ++i){
 		vset[i].known = false;
-		vset[i].dst = INT_MAX;
+		vset[i].dst = INFINITE;
 		vset[i].path = -1;
 	}
 }
@@ -219,11 +219,11 @@ void Graph<VertexType, WeightType>::unWeight(int n){
 
 	while(!que.empty()){
 		int cur = que.front();
-		vset[cur].known = true;
+		//vset[cur].known = true;//don't need known flag
 		que.pop();
 		Edge<WeightType>* ptr = vset[cur].neighbours;
 		while(ptr){
-			if(!vset[ptr->dest].known && vset[cur].dst + 1 < vset[ptr->dest].dst){
+			if(vset[ptr->dest].dst == INFINITE){
 				vset[ptr->dest].dst = vset[cur].dst + 1;
 				vset[ptr->dest].path = cur;
 				que.push(ptr->dest);

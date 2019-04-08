@@ -12,10 +12,10 @@ int main(){
 	g.insertEdge(0, 1, 10);
 	g.insertEdge(0, 2, 3);
 	g.insertEdge(1, 2, 5);
-	//g.insertEdge(2, 3, 4);
-	//g.insertEdge(3, 4, 7);
-	//g.insertEdge(3, 5, 6);
-	//g.insertEdge(4, 5, 1);
+	g.insertEdge(2, 3, 1);
+	g.insertEdge(2, 4, 2);
+	g.insertEdge(3, 5, 6);
+	g.insertEdge(0, 4, 7);
 
 	g.printVertex(); std::cout << std::endl;
 	return 0;

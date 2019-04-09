@@ -2,6 +2,7 @@
 
 #include <utility>
 #include <iostream>
+#include <vector>
 #include <queue>
 #include <climits>
 #define INFINITE (INT_MAX >> 1)
@@ -80,15 +81,15 @@ public:
 	void initPath();//init [known, path, dst] value of each vertex
 
 	//minimum spanning tree
-	void prim(int n, std::vector<pair<int, int> > &primEdges);
-	void kruskal(int n, std::vector<pair<int, int> > &primEdges);
+	bool prim(int n, std::vector<std::pair<int, int> > &primEdges);
+	bool kruskal(int n, std::vector<std::pair<int, int> > &primEdges);
 private:
 	int vertexNum; // number of vertexs
 	int edgeNum;   // number of edges
 	int capacity;  // maximum size of Graph
 	static const int DEFAULT_SIZE = 10;
 	Vertex<VertexType, WeightType>* vset; // set of vertexs
-
+	//std::vector<std::pair<int, int>> edges;
 	//bool (*insertEdgeFunc)(int, int, WeightType);//insertEdge Function
 };
 
@@ -136,6 +137,7 @@ bool Graph<VertexType, WeightType>::insertEdge(int idx1, int idx2, WeightType we
 			ptr->next = new Edge<WeightType>(idx1, weight);
 		}
 
+		//edges.push_back(std::pair<>)
 		++edgeNum;
 		
 		return true;
@@ -188,33 +190,85 @@ void Graph<VertexType, WeightType>::initPath(){
 	}
 }
 
+
 template<class VertexType, class WeightType>
-void Graph<VertexType, WeightType>::prim(int n, std::vector<pair<int, int>> &primEdges){
+bool Graph<VertexType, WeightType>::prim(int n, std::vector<std::pair<int, int>> &primEdges){
 	if(n < 0 || n >= vertexNum){
-		std::cerr << "Dijkstra(): Array Index Out Of Bounds Exception..." << std::endl;
-		return;
+		std::cerr << "prim(): Array Index Out Of Bounds Exception..." << std::endl;
+		return false;
 	}
 
 	initPath();
 
-	primEdges.clear();
-
-	std::priority_queue< std::pair<WeightType, int> > pq;
+	std::priority_queue<std::pair<WeightType, int>> pq;
 	vset[n].dst = 0;
+	vset[n].known = true; //if vertice n is included in pq
 	pq.push(std::pair<WeightType, int>(0, n));
 
+	std::vector<int> vpq(vertexNum, 0);//Record times of each vertice enqueued in pq
+	vpq[n] = 1;
+
 	while(!pq.empty()){
-		auto cur = pq.top(); 
-		vset[cur.second].known = true;
-		primEdges.push_back(std::pair<int, int>(vset[cur.second].path, cur.second));
+		auto cur = pq.top();
 		pq.pop();
+		vset[cur.second].known = false;
+		primEdges.push_back(std::pair<WeightType, int>(vset[cur.second].path, cur.second));
 		Edge<WeightType>* ptr = vset[cur.second].neighbours;
 		while(ptr){
-			if(!vset[ptr->dest].known &&  cur.first + ptr->weight < vset[ptr->dest].dst){
+			if(cur.first + ptr->weight < vset[ptr->dest].dst){
 				vset[ptr->dest].dst = cur.first + ptr->weight;
 				vset[ptr->dest].path = cur.second;
-				pq.push(std::pair<WeightType, int>(vset[ptr->dest].dst, ptr->dest));
-			}
+				if(!vset[ptr->dest].known){
+					pq.push(std::pair<WeightType, int>(vset[ptr->dest].dst, ptr->dest));
+					vset[ptr->dest].known = true;
+					if(++vpq[ptr->dest] >= vertexNum) {
+						std::cerr << "prim(): Current graph hs negative circle..." << std::endl;
+						return false;
+					}
+				}
+ 			}
+			ptr = ptr->next;
+		}
+	}
+	return true;
+}
+
+
+//class RealEdge
+template<class WeightType>
+class RealEdge{
+public:
+	RealEdge(int src, int dest, WeightType weight){
+		this->src = src;
+		this->dest = dest;
+		this->weight = weight;
+	}
+	~RealEdge(){
+		//std::cout << "delete edge: "<< "dest " << dest << ", weight " << weight << std::endl;
+	}
+
+	operator>(RealEdge re){
+		
+	}
+	int src;
+	int dest;//the dest vertex of the edge
+	WeightType weight;
+};
+
+template<class VertexType, class WeightType>
+bool Graph<VertexType, WeightType>::kruskal(int n, std::vector<std::pair<int, int>> &primEdges){
+	if(n < 0 || n >= vertexNum){
+		std::cerr << "prim(): Array Index Out Of Bounds Exception..." << std::endl;
+		return false;
+	}
+
+	initPath();
+
+	std::priority_queue<RealEdge*, > edges;
+	for(int i = 0; i < vertexNum; ++i){
+		Edge<WeightType>* ptr = vset[i].neighbours;
+		while(ptr){
+			if(ptr->dest > i) edges.push_back(std::pair<int, int>(i, ))
 			ptr = ptr->next;
 		}
 	}

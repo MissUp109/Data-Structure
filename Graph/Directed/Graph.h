@@ -86,6 +86,7 @@ public:
 	//shortest path algorithm
 	void unWeight(int n); //unweighted shortest path
 	void Dijkstra(int n); //weighted shortest path, O(V*V)
+	void AdvancedDijkstra(int n); //if the graph has no circle then we can select vertice by topoSort, O(V + E)
 	bool BellmanFord(int n);//weighted shortest path with negative circle, O(V * E)
 	bool SPFA(int n); //weighted shortest path with negative circle, O(k * E)
 private:
@@ -263,6 +264,41 @@ void Graph<VertexType, WeightType>::Dijkstra(int n){
 }
 
 
+//This function can only be used when the graph has no circle and the degree of vertice n is 0.
+template<class VertexType, class WeightType>
+void Graph<VertexType, WeightType>::AdvancedDijkstra(int n){
+	if(n < 0 || n >= vertexNum){
+		std::cerr << "AdvancedDijkstra(): Array Index Out Of Bounds Exception..." << std::endl;
+		return;
+	}
+	else if(vset[n].degree != 0){
+		std::cerr << "AdvancedDijkstra(): vset[n].degree != 0" << std::endl;
+		return;
+	}
+
+	initPath();
+	
+	std::queue<int> zero;
+	vset[n].dst = 0;
+	zero.push(n);//only vset[n].degree == 0
+	
+	while(!zero.empty()){
+		int cur = zero.front();
+		vset[cur].known = true;
+		zero.pop();
+		Edge<WeightType>* ptr = vset[cur].neighbours;
+		while(ptr){
+			if(--vset[ptr->dest].degree == 0){
+				zero.push(ptr->dest);
+				vset[ptr->dest].dst = vset[cur].dst + ptr->weight;
+				vset[ptr->dest].path = cur;
+			}
+			ptr = ptr->next;
+		}
+	}
+}
+
+
 template<class VertexType, class WeightType>
 bool Graph<VertexType, WeightType>::BellmanFord(int n){
 	if(n < 0 || n >= vertexNum){
@@ -304,7 +340,7 @@ bool Graph<VertexType, WeightType>::BellmanFord(int n){
 template<class VertexType, class WeightType>
 bool Graph<VertexType, WeightType>::SPFA(int n){
 	if(n < 0 || n >= vertexNum){
-		std::cerr << "Dijkstra(): Array Index Out Of Bounds Exception..." << std::endl;
+		std::cerr << "SPFA(): Array Index Out Of Bounds Exception..." << std::endl;
 		return false;
 	}
 
@@ -312,25 +348,25 @@ bool Graph<VertexType, WeightType>::SPFA(int n){
 
 	vset[n].dst = 0; 
 	vset[n].known = true;//decide whether vertex is included in queue.
-	std::priority_queue<int> pq;
-	pq.push(n);
+	std::priority_queue< std::pair<WeightType, int> > pq;
+	pq.push(std::pair<WeightType, int>(0, n));
 
 	//record the dequeued times of each vertex
 	std::vector<int> dq(vertexNum, 0);
 	dq[n] = 1;
 
 	while(!pq.empty()){
-		int cur = pq.top();
+		auto cur = pq.top();
 		pq.pop();
-		vset[cur].known = false;
-		Edge<WeightType>* ptr = vset[cur].neighbours;
+		vset[cur.second].known = false;
+		Edge<WeightType>* ptr = vset[cur.second].neighbours;
 		while(ptr){
-			if(vset[cur].dst + ptr->weight < vset[ptr->dest].dst){
-				vset[ptr->dest].dst = vset[cur].dst + ptr->weight;
-				vset[ptr->dest].path = cur;
+			if(cur.first + ptr->weight < vset[ptr->dest].dst){
+				vset[ptr->dest].dst = cur.first + ptr->weight;
+				vset[ptr->dest].path = cur.second;
 				if(!vset[ptr->dest].known){
 					vset[ptr->dest].known = true;
-					pq.push(ptr->dest);
+					pq.push(std::pair<WeightType, int>(vset[ptr->dest].dst, ptr->dest));
 					if(++dq[ptr->dest] > vertexNum - 1)
 						return false;				
 				}

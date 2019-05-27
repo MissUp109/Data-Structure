@@ -1,4 +1,3 @@
-
 #include <vector>
 #define DEFAULT_CAPACITY 20
 
@@ -24,3 +23,4 @@ private:
 	T* arr;
 	int capacity = DEFAULT_CAPACITY;
 };
+

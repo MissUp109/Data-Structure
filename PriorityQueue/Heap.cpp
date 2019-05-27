@@ -102,6 +102,3 @@ template<class T> void print(){
 		std::cout << std::endl;
 	}
 }
-
-
-
